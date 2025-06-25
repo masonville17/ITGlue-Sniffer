@@ -22,7 +22,7 @@ $secondaryRequests = @(
     "Get-ITGlueFlexibleAssets"
 )
 
-# create a directory to store output
+# Optionally, create a directory to store output
 $outputDir = "ITGlueExports"
 
 foreach ($folder in @($outputDir)) {
@@ -64,77 +64,81 @@ foreach ($func in $itgGetFunctions) {
 $configs = Get-ITGlueConfigurations
 $pageSize = 100
 
+$configs = Get-ITGlueConfigurations
+$pageSize = 100
+$allInterfaces = @()
+
 foreach ($config in $configs.data) {
     $conf_id = $config.id
     $page = 1
-    $allData = @()
 
     do {
         try {
             $result = Get-ITGlueConfigurationInterfaces -conf_id $conf_id -page_number $page -page_size $pageSize
             $dataPage = $result.data
-            $allData += $dataPage
+            $allInterfaces += $dataPage
             $page++
         } catch {
             Write-Warning "Failed to get interfaces for configuration $conf_id on page $page"
             break
         }
     } while ($dataPage.Count -eq $pageSize)
-
-    if ($allData.Count -gt 0) {
-        $allData | ConvertTo-Json -Depth 10 | Set-Content -Path "ITGlueExports\Interfaces_$conf_id.json"
-    }
 }
+
+if ($allInterfaces.Count -gt 0) {
+    $allInterfaces | ConvertTo-Json -Depth 10 | Set-Content -Path "$outputDir\ConfigurationInterfaces.json"
+}
+
 $faTypes = Get-ITGlueFlexibleAssetTypes
 $pageSize = 100
+$allFields = @()
 
 foreach ($type in $faTypes.data) {
     $typeId = $type.id
     $page = 1
-    $allData = @()
 
     do {
         try {
             $result = Get-ITGlueFlexibleAssetFields -flexible_asset_type_id $typeId -page_number $page -page_size $pageSize
             $dataPage = $result.data
-            $allData += $dataPage
+            $allFields += $dataPage
             $page++
         } catch {
             Write-Warning "Failed to get flexible asset fields for type $typeId on page $page"
             break
         }
     } while ($dataPage.Count -eq $pageSize)
-
-    if ($allData.Count -gt 0) {
-        $allData | ConvertTo-Json -Depth 10 | Set-Content -Path "ITGlueExports\FlexibleAssetFields_$typeId.json"
-    }
 }
+
+if ($allFields.Count -gt 0) {
+    $allFields | ConvertTo-Json -Depth 10 | Set-Content -Path "$outputDir\FlexibleAssetFields.json"
+}
+
 $orgs = Get-ITGlueOrganizations
 $faTypes = Get-ITGlueFlexibleAssetTypes
 $pageSize = 100
+$allFlexibleAssets = @()
 
 foreach ($org in $orgs.data) {
     foreach ($type in $faTypes.data) {
         $orgId = $org.id
         $typeId = $type.id
         $page = 1
-        $allData = @()
 
         do {
             try {
                 $result = Get-ITGlueFlexibleAssets -filter_flexible_asset_type_id $typeId -filter_organization_id $orgId -page_number $page -page_size $pageSize
                 $dataPage = $result.data
-                $allData += $dataPage
+                $allFlexibleAssets += $dataPage
                 $page++
             } catch {
                 Write-Warning "Failed to get flexible assets for org $orgId and type $typeId on page $page"
                 break
             }
         } while ($dataPage.Count -eq $pageSize)
-
-        if ($allData.Count -gt 0) {
-            $filePath = "ITGlueExports\FlexibleAssets_org${orgId}_type${typeId}.json"
-            $allData | ConvertTo-Json -Depth 10 | Set-Content -Path $filePath
-        }
     }
+}
+
+if ($allFlexibleAssets.Count -gt 0) {
+    $allFlexibleAssets | ConvertTo-Json -Depth 10 | Set-Content -Path "$outputDir\FlexibleAssets.json"
 }
